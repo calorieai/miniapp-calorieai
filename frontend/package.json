@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "start": "serve -s dist -l $PORT",
+    "start": "serve -s dist -l tcp://0.0.0.0:$PORT",
     "preview": "vite preview",
     "type-check": "tsc --noEmit"
   },
