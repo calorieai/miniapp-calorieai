@@ -13,7 +13,7 @@ import crypto from 'crypto';
 const router = Router();
 const prisma = new PrismaClient();
 
-const ADMIN_TG_ID = '7179785109';
+const ADMIN_TG_ID = process.env.ADMIN_TELEGRAM_ID || '5838227849';
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
 // Multer Setup for Receipts
@@ -37,8 +37,7 @@ const upload = multer({
 // Helper to notify admin
 async function notifyAdmin(user: any, requestId: string, receiptPath: string) {
     if (!BOT_TOKEN) return console.error('❌ BOT_TOKEN missing in .env');
-    const ADMIN_TG_ID = "7179785109"; // Hardcoded for single admin
-
+    
     const userLine = user.username ? `@${user.username}` : user.firstName || 'User';
     const phoneLine = user.phoneNumber ? `📱 Phone: \`${user.phoneNumber}\`\n` : '';
 
@@ -404,7 +403,6 @@ router.post('/alif/callback', async (req, res) => {
 
             // Notify Admin via Bot
             if (BOT_TOKEN) {
-                const ADMIN_TG_ID = "7179785109";
                 const userLine = user.username ? `@${user.username}` : user.firstName || 'User';
                 const phoneLine = user.phoneNumber ? `📱 Телефон: \`${user.phoneNumber}\`\n` : '';
                 const profileLink = `tg://user?id=${user.telegramId}`;
@@ -654,7 +652,6 @@ router.post('/eskhata/callback', async (req, res) => {
 
                 // Notify Admin via Bot
                 if (BOT_TOKEN && user.telegramId) {
-                    const ADMIN_TG_ID = "7179785109";
                     const userLine = user.username ? `@${user.username}` : user.firstName || 'User';
                     const phoneLine = user.phoneNumber ? `📱 Телефон: \`${user.phoneNumber}\`\n` : '';
                     const profileLink = `tg://user?id=${user.telegramId}`;
