@@ -272,8 +272,8 @@ export default function SubscriptionModal({ onClose }: SubscriptionModalProps) {
     };
 
     const handleOpenAlifMobi = () => {
-        if (!user) return;
-        const paymentUrl = `https://app.alif.tj/providers?id=6970&amount=30&account=${user.telegramId}`;
+        if (!user || !alifInvoiceId) return;
+        const paymentUrl = `https://app.alif.tj/providers?id=6972&amount=30&account=${alifInvoiceId}`;
         if (window.Telegram?.WebApp?.openLink) {
             window.Telegram.WebApp.openLink(paymentUrl);
         } else {
