@@ -1,6 +1,6 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import authRoutes from './routes/auth';
 import mealRoutes from './routes/meals';
 import userRoutes from './routes/user';
@@ -8,8 +8,6 @@ import analyzeRoutes from './routes/analyze';
 import subscriptionRoutes from './routes/subscriptions';
 import webhookRoutes from './routes/webhooks';
 import path from 'path';
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;

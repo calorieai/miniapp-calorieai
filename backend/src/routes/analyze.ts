@@ -44,9 +44,9 @@ router.post('/', upload.single('image'), async (req, res) => {
 
         // Return both analysis and the pre-uploaded URL
         res.json({ ...analysisResult, photoUrl });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Analysis failed:', error);
-        res.status(500).json({ error: 'Failed to analyze image' });
+        res.status(500).json({ error: error.message || 'Failed to analyze image' });
     }
 });
 

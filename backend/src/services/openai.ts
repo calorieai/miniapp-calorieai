@@ -1,23 +1,39 @@
-import OpenAI from 'openai';
+import { analyzeFoodImageGemini, FoodAnalysis } from './gemini';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-interface FoodAnalysis {
-  name: string;
-  calories: number;
-  protein: number;
-  fat: number;
-  carbs: number;
-  ingredients: string[];
-  weightG: number;
-  confidence: number;
-}
+export { FoodAnalysis };
 
 export async function analyzeFoodImage(imageUrl: string): Promise<FoodAnalysis> {
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  const openaiKey = process.env.OPENAI_API_KEY;
+
+  // Use Gemini by default if key is available or if OpenAI key is not provided
+  if (geminiKey || !openaiKey) {
+    try {
+      console.log('🤖 Analyzing food image with Google Gemini...');
+      return await analyzeFoodImageGemini(imageUrl);
+    } catch (geminiError: any) {
+      console.error('❌ Gemini Analysis Failed:', geminiError.message);
+      if (!openaiKey) {
+        throw new Error(`Food analysis failed (Gemini): ${geminiError.message}`);
+      }
+      console.warn('⚠️ Gemini failed, trying OpenAI as fallback...');
+    }
+  }
+
+  // OpenAI Provider (only if OPENAI_API_KEY is explicitly set)
+  if (!openaiKey) {
+    throw new Error('GEMINI_API_KEY is missing in environment variables');
+  }
+
   try {
+    console.log('🤖 Analyzing food image with OpenAI...');
+    const OpenAIModule = await import('openai');
+    const OpenAI = (OpenAIModule as any).default || OpenAIModule;
+    const openai = new OpenAI({ apiKey: openaiKey });
+
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', // Much faster than gpt-4o
-      response_format: { type: "json_object" }, // FORCE JSON
+      model: 'gpt-4o-mini',
+      response_format: { type: "json_object" },
       messages: [{
         role: 'system',
         content: 'You are a nutritionist API. You strictly output JSON. Analyze the food image. Estimate weight in grams (weightG), confidence (0.0 to 1.0), and list main ingredients. If not food, return {"name": "Не еда", "calories": 0, "protein": 0, "fat": 0, "carbs": 0, "ingredients": [], "weightG": 0, "confidence": 0}.'
@@ -28,11 +44,11 @@ export async function analyzeFoodImage(imageUrl: string): Promise<FoodAnalysis> 
           { type: 'image_url', image_url: { url: imageUrl } }
         ]
       }],
-      max_tokens: 300
+      max_tokens: 400
     });
 
     const content = response.choices[0]?.message?.content;
-    if (!content) throw new Error('No response');
+    if (!content) throw new Error('No response from OpenAI');
 
     const jsonString = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const result: FoodAnalysis = JSON.parse(jsonString);
@@ -45,29 +61,17 @@ export async function analyzeFoodImage(imageUrl: string): Promise<FoodAnalysis> 
         : [];
 
     return {
-      name: result.name,
-      calories: Math.round(result.calories),
-      protein: Math.round(result.protein * 10) / 10,
-      fat: Math.round(result.fat * 10) / 10,
-      carbs: Math.round(result.carbs * 10) / 10,
+      name: result.name || 'Неизвестное блюдо',
+      calories: Math.round(Number(result.calories) || 0),
+      protein: Math.round((Number(result.protein) || 0) * 10) / 10,
+      fat: Math.round((Number(result.fat) || 0) * 10) / 10,
+      carbs: Math.round((Number(result.carbs) || 0) * 10) / 10,
       ingredients,
-      weightG: result.weightG || 0,
-      confidence: result.confidence || 0
+      weightG: Math.round(Number(result.weightG) || 0),
+      confidence: Math.min(1, Math.max(0, Number(result.confidence) || 0.9))
     };
   } catch (error: any) {
-    console.error('OpenAI Analysis Failed:', error.message);
-
-    // Fallback to Mock Data if API fails (e.g. Rate Limit, No Credit)
-    console.warn('⚠️ Switching to MOCK DATA due to API error.');
-    return {
-      name: "[Fallback] Куриная грудка с рисом",
-      calories: 450,
-      protein: 45,
-      fat: 12,
-      carbs: 38,
-      ingredients: ["Курица", "Рис", "Масло"],
-      weightG: 350,
-      confidence: 0.8
-    };
+    console.error('❌ OpenAI Analysis Failed:', error.message);
+    throw new Error(`AI Analysis Failed: ${error.message}`);
   }
 }
