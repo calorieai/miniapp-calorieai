@@ -10,9 +10,10 @@ export interface FoodAnalysis {
 }
 
 const CANDIDATE_MODELS = [
+  'gemini-3.5-flash',
+  'gemini-3.5-flash-lite',
   'gemini-3.6-flash',
-  'gemini-flash-latest',
-  'gemini-2.5-flash-lite'
+  'gemini-flash-latest'
 ];
 
 export async function analyzeFoodImageGemini(imageInput: string): Promise<FoodAnalysis> {
@@ -96,8 +97,7 @@ If the image does not contain food, return:
 
       if (!response.ok) {
         const errText = await response.text();
-        // If high demand/temporary unavailable (503/429/404), try next model
-        if ([404, 429, 503].includes(response.status) && model !== CANDIDATE_MODELS[CANDIDATE_MODELS.length - 1]) {
+        if (model !== CANDIDATE_MODELS[CANDIDATE_MODELS.length - 1]) {
           console.warn(`[Gemini] Model ${model} returned ${response.status}, trying fallback model...`);
           lastError = new Error(`Gemini model ${model} error (${response.status}): ${errText}`);
           continue;

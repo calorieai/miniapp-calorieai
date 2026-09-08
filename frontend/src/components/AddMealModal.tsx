@@ -165,7 +165,8 @@ const AddMealModal = memo(({ onClose }: { onClose: () => void }) => {
         setShowSubscription(true);
         return;
       }
-      alert(t('common.analysisError', language));
+      const serverError = error?.response?.data?.error;
+      alert(serverError || t('common.analysisError', language));
     } finally {
       setIsAnalyzing(false);
     }
