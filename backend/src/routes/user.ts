@@ -144,6 +144,11 @@ router.patch('/:userId', async (req, res) => {
       data.dailyCalorieGoal = computed;
     }
 
+    const userExists = await prisma.user.findUnique({ where: { id: req.params.userId } });
+    if (!userExists) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
     const user = await prisma.user.update({ where: { id: req.params.userId }, data });
 
     console.log(`[PATCH /user/${req.params.userId}] Updated user:`, {

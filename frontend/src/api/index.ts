@@ -6,6 +6,18 @@ export const api = axios.create({
   timeout: 60000 // 60 seconds
 });
 
+// Self-healing: if user was wiped from DB while app was open, auto-reload to recreate clean user
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 404 && error?.response?.data?.error === 'User not found') {
+      console.warn('User record no longer exists in DB. Reloading app to recreate clean profile...');
+      window.location.reload();
+    }
+    return Promise.reject(error);
+  }
+);
+
 export interface User {
   id: string;
   telegramId: string;

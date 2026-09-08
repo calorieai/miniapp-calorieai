@@ -16,6 +16,11 @@ router.post('/', upload.single('photo'), async (req, res) => {
       return res.status(400).json({ error: 'Missing data (photo or photoUrl required)' });
     }
 
+    const userExists = await prisma.user.findUnique({ where: { id: userId } });
+    if (!userExists) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
     let photoUrl = req.body.photoUrl;
 
     // If file is provided, upload it (fallback behavior). 
