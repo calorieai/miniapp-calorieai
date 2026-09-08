@@ -58,7 +58,12 @@ router.post('/', async (req, res) => {
         heightCm: user.heightCm,
         weightKg: user.weightKg,
         activity: user.activity,
-        goal: user.goal
+        goal: user.goal,
+        isPremium: Boolean(
+          user.isPremium ||
+          (user.subscriptionExpiresAt && new Date(user.subscriptionExpiresAt) > new Date())
+        ),
+        subscriptionExpiresAt: user.subscriptionExpiresAt
       }
     });
   } catch (error) {

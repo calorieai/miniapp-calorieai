@@ -145,8 +145,13 @@ router.get('/status/:userId', async (req, res) => {
             orderBy: { createdAt: 'desc' }
         });
 
+        const isPremium = Boolean(
+            user.isPremium ||
+            (user.subscriptionExpiresAt && new Date(user.subscriptionExpiresAt) > new Date())
+        );
+
         res.json({
-            isPremium: user.isPremium,
+            isPremium,
             lastRequestStatus: request?.status || 'NONE',
             lastRequestDate: request?.createdAt || null
         });
