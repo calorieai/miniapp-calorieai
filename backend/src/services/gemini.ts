@@ -45,29 +45,42 @@ export async function analyzeFoodImageGemini(imageInput: string): Promise<FoodAn
     base64Data = imageInput;
   }
 
-  const prompt = `You are an expert nutritionist API. You strictly output JSON.
-Analyze the food image.
-Return JSON with the following structure:
+  const prompt = `Ты — профессиональный ИИ-нутрициолог и эксперт по визуальному анализу блюд по фото.
+Твоя цель — максимально точно определить блюдо на фотографии, оценить реальный размер порции в граммах, рассчитать калорийность, БЖУ и выделить основные ингредиенты.
+
+Строгие правила анализа:
+1. НАЗВАНИЕ БЛЮДА ("name"):
+   - Всегда на русском языке с заглавной буквы.
+   - Максимально точное, естественное и аппетитное название.
+   - Безупречно распознавай блюда среднеазиатской/таджикской кухни: Плов/Ош (с говядиной, бараниной, нутом), Курутоб (со слоёным фатиром, зеленью и льняным маслом), Самса (с мясом, тыквой), Манты, Лагман, Шурпа, Мастова, Шакароб/Ачик-чучук, Шашлык (из баранины, говядины, курицы, люля), Тандырный нон/лепёшка, Чакка, Казан-кабоб, Димлама.
+   - Также точно распознавай блюда славянской кухни (борщ, сырники, гречка с мясом, пельмени), кавказской (хинкали, хачапури) и мировой кухни (пицца, бургеры, суши, паста, стейки, шаурма/донер, салаты, десерты).
+   - Если на тарелке комбо из гарнира и основного блюда — назови полно: например, "Картофельное пюре с куриной котлетой и овощами" или "Гречка с тушеной говядиной".
+   - Никогда не используй абстрактные слова вроде "Еда", "Тарелка", "Блюдо".
+
+2. ОЦЕНКА ВЕСА ПОРЦИИ ("weightG"):
+   - Оценивай вес видимой порции в граммах с учетом посуды и визуального масштаба.
+   - Примеры: стандартная тарелка плова ~350-450г, порция супа/шурпы ~350-400г, 1 яблоко ~150-180г, 1 самса ~120-150г, кусок пиццы ~120-150г, порция пасты ~300-350г.
+
+3. КАЛОРИИ И БЖУ ("calories", "protein", "fat", "carbs"):
+   - Рассчитай пищевую ценность ИМЕННО ДЛЯ УКАЗАННОГО ВЕСА ПОРЦИИ ("weightG").
+   - Правило баланса: Calories ≈ (Protein * 4) + (Fat * 9) + (Carbs * 4). Данные должны быть физиологически точными и непротиворечивыми.
+
+4. ИНГРЕДИЕНТЫ ("ingredients"):
+   - Массив из 3-8 основных ингредиентов на русском языке с заглавной буквы.
+
+5. ЕСЛИ НА ФОТО НЕ ЕДА (люди, интерьер, предметы, пустая посуда, животные):
+   - Верни: {"name": "Не еда", "calories": 0, "protein": 0, "fat": 0, "carbs": 0, "ingredients": [], "weightG": 0, "confidence": 0}
+
+Верни результат строго в формате JSON:
 {
-  "name": "Food Name in Russian (start with uppercase)",
+  "name": "Название блюда",
   "calories": number,
   "protein": number,
   "fat": number,
   "carbs": number,
-  "ingredients": ["ingredient1 in Russian", "ingredient2 in Russian"],
+  "ingredients": ["Ингредиент 1", "Ингредиент 2"],
   "weightG": number,
   "confidence": number
-}
-If the image does not contain food, return:
-{
-  "name": "Не еда",
-  "calories": 0,
-  "protein": 0,
-  "fat": 0,
-  "carbs": 0,
-  "ingredients": [],
-  "weightG": 0,
-  "confidence": 0
 }`;
 
   let lastError: Error | null = null;
@@ -111,25 +124,32 @@ If the image does not contain food, return:
         throw new Error('Empty response received from Gemini');
       }
 
-      const jsonString = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      // Safe JSON extraction even if wrapped in markdown codeblocks or text
+      const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const jsonStart = cleanContent.indexOf('{');
+      const jsonEnd = cleanContent.lastIndexOf('}');
+      if (jsonStart === -1 || jsonEnd === -1) {
+        throw new Error('Valid JSON object not found in Gemini response');
+      }
+      const jsonString = cleanContent.substring(jsonStart, jsonEnd + 1);
       const result = JSON.parse(jsonString);
 
       const rawIngredients = result.ingredients;
       const ingredients = Array.isArray(rawIngredients)
-        ? rawIngredients.map((item: any) => String(item)).filter(Boolean)
+        ? rawIngredients.map((item: any) => String(item).trim()).filter(Boolean)
         : rawIngredients
-          ? [String(rawIngredients)]
+          ? [String(rawIngredients).trim()]
           : [];
 
       return {
-        name: result.name || 'Неизвестное блюдо',
+        name: result.name ? String(result.name).trim() : 'Неизвестное блюдо',
         calories: Math.round(Number(result.calories) || 0),
         protein: Math.round((Number(result.protein) || 0) * 10) / 10,
         fat: Math.round((Number(result.fat) || 0) * 10) / 10,
         carbs: Math.round((Number(result.carbs) || 0) * 10) / 10,
         ingredients,
         weightG: Math.round(Number(result.weightG) || 0),
-        confidence: Math.min(1, Math.max(0, Number(result.confidence) || 0.9))
+        confidence: Math.min(1, Math.max(0, Number(result.confidence) || 0.95))
       };
     } catch (err: any) {
       lastError = err;

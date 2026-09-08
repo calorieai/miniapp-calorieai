@@ -34,9 +34,16 @@ router.post('/', upload.single('image'), async (req, res) => {
         // Parallel execution: Analyze content AND Upload to CDN
         const analyzedPromise = analyzeFoodImage(base64Image);
 
-        // Import dynamically if needed or assume import is available at top
-        const { uploadImage } = await import('../services/cloudinary');
-        const uploadPromise = uploadImage(req.file.buffer);
+        // Safe CDN upload: if Cloudinary fails, food analysis MUST still succeed!
+        const uploadPromise = (async () => {
+            try {
+                const { uploadImage } = await import('../services/cloudinary');
+                return await uploadImage(req.file!.buffer);
+            } catch (err: any) {
+                console.warn('⚠️ Cloudinary upload failed (continuing analysis without CDN):', err.message);
+                return null;
+            }
+        })();
 
         const [analysisResult, photoUrl] = await Promise.all([analyzedPromise, uploadPromise]);
 
