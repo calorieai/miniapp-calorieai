@@ -30,6 +30,11 @@ const AddMealModal = memo(({ onClose }: { onClose: () => void }) => {
   const [scanStep, setScanStep] = useState(0);
   const [showSubscription, setShowSubscription] = useState(false);
 
+  const isUserPremium = Boolean(
+    user?.isPremium ||
+    (user?.subscriptionExpiresAt && new Date(user.subscriptionExpiresAt) > new Date())
+  );
+
   const [analysisResult, setAnalysisResult] = useState<{
     name: string;
     calories: number;
@@ -59,6 +64,10 @@ const AddMealModal = memo(({ onClose }: { onClose: () => void }) => {
   ), [language]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isUserPremium) {
+      setShowSubscription(true);
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
@@ -83,6 +92,10 @@ const AddMealModal = memo(({ onClose }: { onClose: () => void }) => {
   };
 
   const startCamera = async () => {
+    if (!isUserPremium) {
+      setShowSubscription(true);
+      return;
+    }
     try {
       setCameraError(null);
       setIsCameraOpen(true);
@@ -153,6 +166,10 @@ const AddMealModal = memo(({ onClose }: { onClose: () => void }) => {
   const handleAnalyze = async (fileOverride?: File) => {
     const targetFile = (fileOverride instanceof File ? fileOverride : selectedFile);
     if (!targetFile || !user) return;
+    if (!isUserPremium) {
+      setShowSubscription(true);
+      return;
+    }
     setIsAnalyzing(true);
     setAnalysisResult(null);
 
@@ -321,11 +338,11 @@ const AddMealModal = memo(({ onClose }: { onClose: () => void }) => {
                 </motion.div>
               ) : !preview ? (
                 <motion.div key="upload" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="flex flex-col gap-4">
-                  <button onClick={startCamera} className="group relative h-48 rounded-[2rem] bg-gradient-to-br from-brand-500 to-brand-600 text-white flex flex-col items-center justify-center shadow-lg active:scale-[0.98] transition-all">
+                  <button onClick={() => { if (!isUserPremium) setShowSubscription(true); else startCamera(); }} className="group relative h-48 rounded-[2rem] bg-gradient-to-br from-brand-500 to-brand-600 text-white flex flex-col items-center justify-center shadow-lg active:scale-[0.98] transition-all">
                     <div className="p-4 bg-white/20 rounded-2xl mb-3"><Camera className="w-8 h-8" /></div>
                     <span className="font-bold text-lg">{t('addMeal.openCamera', language)}</span>
                   </button>
-                  <button onClick={() => fileInputRef.current?.click()} className="h-16 rounded-[2rem] bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center gap-3 font-semibold active:opacity-60 transition-opacity">
+                  <button onClick={() => { if (!isUserPremium) setShowSubscription(true); else fileInputRef.current?.click(); }} className="h-16 rounded-[2rem] bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center gap-3 font-semibold active:opacity-60 transition-opacity">
                     <ImageIcon className="w-5 h-5 text-brand-500" />
                     {t('addMeal.gallery', language)}
                   </button>

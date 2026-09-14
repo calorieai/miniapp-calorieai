@@ -18,40 +18,32 @@ router.post('/', upload.single('image'), async (req, res) => {
             return res.status(400).json({ error: 'User ID required for analysis' });
         }
 
-        // 1. Check Premium Subscription or Daily Free Quota
+        // 1. Strictly Check Active Premium Subscription
         const user = await prisma.user.findUnique({ where: { id: userId } });
         if (!user) return res.status(404).json({ error: 'User not found' });
 
         const now = new Date();
         const isSubscriptionValid = Boolean(
-            user.isPremium ||
+            (user.isPremium && !user.subscriptionExpiresAt) ||
             (user.subscriptionExpiresAt && new Date(user.subscriptionExpiresAt) > now)
         );
 
         if (!isSubscriptionValid) {
-            // Free Tier: 3 free scans per day
-            const todayStr = now.toISOString().split('T')[0];
-            const lastReqStr = user.lastRequestDate ? new Date(user.lastRequestDate).toISOString().split('T')[0] : '';
-            const currentCount = (todayStr === lastReqStr) ? user.dailyRequestCount : 0;
-
-            const FREE_DAILY_LIMIT = 3;
-            if (currentCount >= FREE_DAILY_LIMIT) {
-                return res.status(403).json({
-                    error: `Дневной лимит бесплатных сканирований исчерпан (${FREE_DAILY_LIMIT}/${FREE_DAILY_LIMIT}). Оформите Premium для безлимитного доступа`,
-                    code: 'LIMIT_REACHED'
+            // Keep DB isPremium flag synchronized if expired
+            if (user.isPremium) {
+                await prisma.user.update({
+                    where: { id: userId },
+                    data: { isPremium: false }
                 });
             }
-
-            // Increment daily request count for free tier
-            await prisma.user.update({
-                where: { id: userId },
-                data: {
-                    dailyRequestCount: currentCount + 1,
-                    lastRequestDate: now
-                }
+            return res.status(403).json({
+                error: 'Для сканирования и анализа блюд требуется активная подписка Premium',
+                code: 'PREMIUM_REQUIRED'
             });
-        } else if (!user.isPremium && user.subscriptionExpiresAt && new Date(user.subscriptionExpiresAt) > now) {
-            // Keep DB isPremium flag synchronized with subscriptionExpiresAt
+        }
+
+        // Keep DB isPremium flag synchronized if active via subscriptionExpiresAt
+        if (!user.isPremium && user.subscriptionExpiresAt && new Date(user.subscriptionExpiresAt) > now) {
             await prisma.user.update({
                 where: { id: userId },
                 data: { isPremium: true }

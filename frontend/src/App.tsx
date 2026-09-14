@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { SDKProvider } from '@telegram-apps/sdk-react';
+import { AnimatePresence } from 'framer-motion';
 import Onboarding from './components/Onboarding';
 import MainScreen from './components/MainScreen';
 import WelcomePage from './components/WelcomePage';
@@ -7,6 +8,7 @@ import NavBar from './components/NavBar';
 import Calendar from './components/Calendar';
 import Profile from './components/Profile';
 import AddMealModal from './components/AddMealModal';
+import SubscriptionModal from './components/SubscriptionModal';
 import { useStore } from './store/useStore';
 import { t } from './utils/i18n';
 import { authenticate, getTodayMeals, getProfile } from './api';
@@ -29,6 +31,7 @@ function AppContent() {
   };
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -169,13 +172,29 @@ function AppContent() {
     );
   }
 
+  const isUserPremium = Boolean(
+    user?.isPremium ||
+    (user?.subscriptionExpiresAt && new Date(user.subscriptionExpiresAt) > new Date())
+  );
+
+  const handleAddClick = () => {
+    if (!isUserPremium) {
+      setShowSubscriptionModal(true);
+    } else {
+      setShowAddModal(true);
+    }
+  };
+
   return (
     <div className="pb-20">
       {tab === 'home' && <MainScreen onNavigate={setTab} />}
       {tab === 'calendar' && <Calendar />}
       {tab === 'profile' && <Profile />}
-      <NavBar active={tab} onChange={setTab} onAddClick={() => setShowAddModal(true)} />
-      {showAddModal && <AddMealModal onClose={() => setShowAddModal(false)} />}
+      <NavBar active={tab} onChange={setTab} onAddClick={handleAddClick} />
+      <AnimatePresence>
+        {showAddModal && <AddMealModal onClose={() => setShowAddModal(false)} />}
+        {showSubscriptionModal && <SubscriptionModal onClose={() => setShowSubscriptionModal(false)} />}
+      </AnimatePresence>
     </div>
   );
 }

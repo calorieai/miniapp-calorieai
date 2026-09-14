@@ -38,8 +38,14 @@ export default function SubscriptionModal({ onClose }: SubscriptionModalProps) {
         }
         if (user) {
             checkSubscriptionStatus(user.id).then(data => {
-                if (data.isPremium) setStatus('APPROVED');
-                else setStatus(data.lastRequestStatus);
+                if (data.isPremium) {
+                    setStatus('APPROVED');
+                    if (!user.isPremium) {
+                        setUser({ ...user, isPremium: true });
+                    }
+                } else {
+                    setStatus(data.lastRequestStatus);
+                }
             }).catch(() => { });
         }
         return () => setMounted(false);
@@ -136,6 +142,7 @@ export default function SubscriptionModal({ onClose }: SubscriptionModalProps) {
             // Check immediately
             checkSubscriptionStatus(user.id).then(data => {
                 if (data.isPremium) {
+                    setUser({ ...user, isPremium: true });
                     setRequestStep('success');
                     confetti({
                         particleCount: 150,
@@ -149,6 +156,7 @@ export default function SubscriptionModal({ onClose }: SubscriptionModalProps) {
             intervalId = setInterval(() => {
                 checkSubscriptionStatus(user.id).then(data => {
                     if (data.isPremium) {
+                        setUser({ ...user, isPremium: true });
                         setRequestStep('success');
                         confetti({
                             particleCount: 150,
@@ -187,6 +195,7 @@ export default function SubscriptionModal({ onClose }: SubscriptionModalProps) {
         try {
             const data = await checkSubscriptionStatus(user.id);
             if (data.isPremium) {
+                setUser({ ...user, isPremium: true });
                 setRequestStep('success');
                 confetti({
                     particleCount: 150,
@@ -237,6 +246,7 @@ export default function SubscriptionModal({ onClose }: SubscriptionModalProps) {
         try {
             const data = await checkSubscriptionStatus(user.id);
             if (data.isPremium) {
+                setUser({ ...user, isPremium: true });
                 setRequestStep('success');
                 confetti({
                     particleCount: 150,
