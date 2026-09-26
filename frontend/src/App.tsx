@@ -20,6 +20,7 @@ function AppContent() {
   const [showWelcome, setShowWelcome] = useState(true);
   const [isInitializing, setIsInitializing] = useState(true);
   const [outsideTelegram, setOutsideTelegram] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
   const [tab, setTab] = useState<'home' | 'calendar' | 'profile'>('home');
 
   const resolveInitData = () => {
@@ -91,7 +92,9 @@ function AppContent() {
         }
       } catch (error: any) {
         console.error('Init error:', error);
-        (window as any)._lastError = error.message || JSON.stringify(error);
+        const errMsg = error?.response?.data?.error || error.message || JSON.stringify(error);
+        (window as any)._lastError = errMsg;
+        setInitError(errMsg);
         setOutsideTelegram(true);
       } finally {
         setIsInitializing(false);
@@ -132,6 +135,11 @@ function AppContent() {
           <div className="text-3xl">📱</div>
           <p className="text-lg font-semibold">{t('common.openInTelegramTitle', language)}</p>
           <p className="text-tg-hint text-sm">{t('common.openInTelegramHint', language)}</p>
+          {initError && (
+             <div className="mt-4 p-2 bg-red-100 text-red-600 rounded text-xs text-left max-w-[300px] overflow-auto">
+               Error: {initError}
+             </div>
+          )}
           {import.meta.env.DEV && (
             <div className="text-xs text-red-500 mt-4 max-w-[200px] overflow-hidden">
               Debug: {typeof window !== 'undefined' ? JSON.stringify({
