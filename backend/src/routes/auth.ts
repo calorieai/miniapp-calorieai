@@ -66,9 +66,9 @@ router.post('/', async (req, res) => {
         subscriptionExpiresAt: user.subscriptionExpiresAt
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Auth error:', error);
-    res.status(500).json({ error: 'Internal error' });
+    res.status(500).json({ error: error?.message || 'Internal error' });
   }
 });
 
